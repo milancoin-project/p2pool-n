@@ -7,6 +7,18 @@ from . import data
 from p2pool.util import math, pack, jsonrpc
 from operator import *
 
+def get_milansubsidy(bnHeight):
+    if nHeight < 250000:     
+        nSubsidy = 40
+    else nHeight < 500000:
+        nSubsidy = 25 
+    else nHeight < 750000:
+        nSubsidy = 10
+    else nHeight < 2000000:
+        nSubsidy = 5
+
+    return int(nSubsidy * 1000000)
+
 def get_tenfivesubsidy(bnHeight):
     if bnHeight == 1:
         nSubsidy = 105000
@@ -255,7 +267,7 @@ nets = dict(
             'Milancoinaddress' in (yield bitcoind.rpc_help()) and
             not (yield bitcoind.rpc_getinfo())['testnet']
         )),
-        SUBSIDY_FUNC=lambda height: 40, 
+        SUBSIDY_FUNC=lambda height: get_milansubsidy(height), 
         POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(data)),
         BLOCK_PERIOD=120, # s
         SYMBOL='MLC',
