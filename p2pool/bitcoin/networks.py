@@ -245,6 +245,28 @@ nets = dict(
         DUMB_SCRYPT_DIFF=2**16,
         DUST_THRESHOLD=0.03e8,
     ),
+
+    milancoin=math.Object(
+        P2P_PREFIX='fbc8b7dc'.decode('hex'),
+        P2P_PORT=8333,
+        ADDRESS_VERSION=78,
+        RPC_PORT=8332,
+        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
+            'Milancoinaddress' in (yield bitcoind.rpc_help()) and
+            not (yield bitcoind.rpc_getinfo())['testnet']
+        )),
+        SUBSIDY_FUNC=lambda height: 40, 
+        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(data)),
+        BLOCK_PERIOD=120, # s
+        SYMBOL='MLC',
+        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'Milancoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Milancoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.Milancoin'), 'milancoin.conf'),
+        BLOCK_EXPLORER_URL_PREFIX='http://www.milancoin.org/block/',
+        ADDRESS_EXPLORER_URL_PREFIX='http://www.milancoin.org/address/',
+        TX_EXPLORER_URL_PREFIX='http://www.milancoin.org/tx/',
+        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
+        DUMB_SCRYPT_DIFF=2**16,
+        DUST_THRESHOLD=0.03e8,
+    ),
     
 )
 for net_name, net in nets.iteritems():
