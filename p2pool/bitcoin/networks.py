@@ -7,14 +7,14 @@ from . import data
 from p2pool.util import math, pack, jsonrpc
 from operator import *
 
-def get_milansubsidy(bnHeight):
-    if nHeight < 250000:     
+def get_milansubsidy(mnHeight):
+    if mnHeight < 250000:     
         nSubsidy = 40
-    else nHeight < 500000:
+    else mnHeight < 500000:
         nSubsidy = 25 
-    else nHeight < 750000:
+    else mnHeight < 750000:
         nSubsidy = 10
-    else nHeight < 2000000:
+    else mnHeight < 2000000:
         nSubsidy = 5
 
     return int(nSubsidy * 1000000)
