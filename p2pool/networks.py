@@ -183,7 +183,7 @@ nets = dict(
     ),                                                                                                                                                                         
 
     milancoin=math.Object(
-        PARENT=networks.nets['Milancoin'],
+        PARENT=networks.nets['milancoin'],
         SHARE_PERIOD=15, # seconds
         CHAIN_LENGTH=24*60*60//10, # shares
         REAL_CHAIN_LENGTH=24*60*60//10, # shares
