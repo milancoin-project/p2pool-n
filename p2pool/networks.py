@@ -182,6 +182,26 @@ nets = dict(
         VERSION_WARNING=lambda v: 'Upgrade Spaincoin to >=0.8.8.0!' if v < 80800 else None,
     ),                                                                                                                                                                         
 
+    milancoin=math.Object(
+        PARENT=networks.nets['Milancoin'],
+        SHARE_PERIOD=15, # seconds
+        CHAIN_LENGTH=24*60*60//10, # shares
+        REAL_CHAIN_LENGTH=24*60*60//10, # shares
+        TARGET_LOOKBEHIND=200, # shares
+        SPREAD=12, # blocks
+        IDENTIFIER='adc5as4fsf542012'.decode('hex'),
+        PREFIX='adc5as4fsf542014'.decode('hex'),
+        P2P_PORT=13334,
+        MIN_TARGET=0,
+        MAX_TARGET=2**256//2**20 - 1,
+        PERSIST=True,
+        WORKER_PORT=13333,
+        BOOTSTRAP_ADDRS='67.23.234.59'.split(' '),
+        ANNOUNCE_CHANNEL='#p2pool-mlc',
+        VERSION_CHECK=lambda v: True,
+        VERSION_WARNING=lambda v: 'Upgrade Milancoin to >=0.7.7.0!' if v < 70700 else None,
+    ),                                                                                                                                                                         
+
 )
 for net_name, net in nets.iteritems():
     net.NAME = net_name
