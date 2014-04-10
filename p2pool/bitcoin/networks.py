@@ -10,12 +10,14 @@ from operator import *
 def get_milansubsidy(mnHeight):
     if mnHeight < 250000:     
         nSubsidy = 40
-    else mnHeight < 500000:
+    elif mnHeight < 500000:
         nSubsidy = 25 
-    else mnHeight < 750000:
+    elif mnHeight < 750000:
         nSubsidy = 10
-    else mnHeight < 2000000:
+    elif mnHeight < 2000000:
         nSubsidy = 5
+    else:
+        nSubsidy = 2
 
     return int(nSubsidy * 1000000)
 
