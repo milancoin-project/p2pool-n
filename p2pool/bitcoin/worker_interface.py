@@ -56,8 +56,8 @@ class WorkerInterface(object):
         request.setHeader('X-Long-Polling', '/long-polling')
         request.setHeader('X-Roll-NTime', 'expire=100')
         request.setHeader('X-Is-P2Pool', 'true')
-        if request.getHeader('Host') is not None:
-            request.setHeader('X-Stratum', 'stratum+tcp://' + request.getHeader('Host'))
+#        if request.getHeader('Host') is not None:
+#            request.setHeader('X-Stratum', 'stratum+tcp://' + request.getHeader('Host'))
         
         if data is not None:
             header = getwork.decode_data(data)
@@ -97,19 +97,11 @@ class WorkerInterface(object):
         if p2pool.DEBUG:
             print 'POLL %i END identifier=%i' % (id, self.worker_bridge.new_work_event.times)
         
-        extra_params = {}
-        if request.getHeader('User-Agent') == 'Jephis PIC Miner':
-            # ASICMINER BE Blades apparently have a buffer overflow bug and
-            # can't handle much extra in the getwork response
-            extra_params = {}
-        else:
-            extra_params = dict(identifier=str(self.worker_bridge.new_work_event.times), submitold=True)
-        defer.returnValue(res.getwork(**extra_params))
+        defer.returnValue(res.getwork(identifier=str(self.worker_bridge.new_work_event.times), submitold=True))
 
 class CachingWorkerBridge(object):
     def __init__(self, inner):
         self._inner = inner
-        self.net = self._inner.net
         
         self.COINBASE_NONCE_LENGTH = (inner.COINBASE_NONCE_LENGTH+1)//2
         self.new_work_event = inner.new_work_event

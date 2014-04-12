@@ -38,12 +38,12 @@ class Type(object):
     def __ne__(self, other):
         return not (self == other)
     
-    def _unpack(self, data, ignore_trailing=False):
+    def _unpack(self, data):
         obj, (data2, pos) = self.read((data, 0))
         
         assert data2 is data
         
-        if pos != len(data) and not ignore_trailing:
+        if pos != len(data):
             raise LateEnd()
         
         return obj
@@ -59,13 +59,11 @@ class Type(object):
         return ''.join(res)
     
     
-    def unpack(self, data, ignore_trailing=False):
-        obj = self._unpack(data, ignore_trailing)
+    def unpack(self, data):
+        obj = self._unpack(data)
         
         if p2pool.DEBUG:
-            packed = self._pack(obj)
-            good = data.startswith(packed) if ignore_trailing else data == packed
-            if not good:
+            if self._pack(obj) != data:
                 raise AssertionError()
         
         return obj
@@ -324,5 +322,6 @@ class FixedStrType(Type):
     
     def write(self, file, item):
         if len(item) != self.length:
+            print len(item), ' ', self.length
             raise ValueError('incorrect length item!')
         return file, item

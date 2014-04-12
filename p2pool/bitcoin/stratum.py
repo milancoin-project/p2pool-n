@@ -2,24 +2,22 @@ import random
 import sys
 
 from twisted.internet import protocol, reactor
-from twisted.python import log
 
 from p2pool.bitcoin import data as bitcoin_data, getwork
 from p2pool.util import expiring_dict, jsonrpc, pack
 
 
 class StratumRPCMiningProvider(object):
-    def __init__(self, wb, other, transport):
+    def __init__(self, wb, other):
         self.wb = wb
         self.other = other
-        self.transport = transport
         
         self.username = None
         self.handler_map = expiring_dict.ExpiringDict(300)
         
         self.watch_id = self.wb.new_work_event.watch(self._send_work)
     
-    def rpc_subscribe(self, miner_version=None, session_id=None):
+    def rpc_subscribe(self):
         reactor.callLater(0, self._send_work)
         
         return [
@@ -34,14 +32,9 @@ class StratumRPCMiningProvider(object):
         reactor.callLater(0, self._send_work)
     
     def _send_work(self):
-        try:
-            x, got_response = self.wb.get_work(*self.wb.preprocess_request('' if self.username is None else self.username))
-        except:
-            log.err()
-            self.transport.loseConnection()
-            return
+        x, got_response = self.wb.get_work(*self.wb.preprocess_request('' if self.username is None else self.username))
         jobid = str(random.randrange(2**128))
-        self.other.svc_mining.rpc_set_difficulty(bitcoin_data.target_to_difficulty(x['share_target'])*self.wb.net.DUMB_SCRYPT_DIFF).addErrback(lambda err: None)
+        self.other.svc_mining.rpc_set_difficulty(bitcoin_data.target_to_difficulty(x['share_target'])).addErrback(lambda err: None)
         self.other.svc_mining.rpc_notify(
             jobid, # jobid
             getwork._swap4(pack.IntType(256).pack(x['previous_block'])).encode('hex'), # prevhash
@@ -78,7 +71,7 @@ class StratumRPCMiningProvider(object):
 
 class StratumProtocol(jsonrpc.LineBasedPeer):
     def connectionMade(self):
-        self.svc_mining = StratumRPCMiningProvider(self.factory.wb, self.other, self.transport)
+        self.svc_mining = StratumRPCMiningProvider(self.factory.wb, self.other)
     
     def connectionLost(self, reason):
         self.svc_mining.close()

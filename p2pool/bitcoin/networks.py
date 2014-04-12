@@ -4,7 +4,7 @@ import platform
 from twisted.internet import defer
 
 from . import data
-from p2pool.util import math, pack, jsonrpc
+from p2pool.util import math, pack
 from operator import *
 
 def get_milansubsidy(mnHeight):
@@ -20,38 +20,7 @@ def get_milansubsidy(mnHeight):
         nSubsidy = 2
 
     return int(nSubsidy * 1000000)
-
-def get_tenfivesubsidy(bnHeight):
-    if bnHeight == 1:
-        nSubsidy = 105000
-    elif bnHeight <= 1050:
-        nSubsidy = 1.57079632
-    elif bnHeight <= 3150:
-        nSubsidy = 3.14159265
-    elif bnHeight <= 4000:
-        nSubsidy = 9.8596
-    else:
-        nSubsidy = 3.14159265
-
-    return int(nSubsidy * 1000000)
-
-SPASUBSIDY = [ 0, 940, 3492, 6069, 8673, 11304, 13963, 16650, 19366, 22112, 24887, 27694, 30532, 33402, 36305, 39241, 42213, 45219, 48262, 51342, 54459, 57616, 60812, 64050, 67329, 70652, 74018, 77430, 80889, 84396, 87952, 91559, 95218, 98930, 102698, 106523, 110407, 114351, 118358, 122429, 126566, 130773, 135051, 139402, 143830, 148336, 152924, 157597, 162358, 167210, 172157, 177203, 182351, 187607, 192974, 198457, 204062, 209794, 215659, 221663, 227813, 234116, 240581, 247215, 254027, 261028, 268229, 275641, 283276, 291149, 299275, 307671, 316355, 325347, 334672, 344353, 354420, 364904, 375841, 387273, 399246, 411814, 425039, 438994, 453765, 469451, 486176, 504084, 523359, 544224, 566966, 591957, 619690, 650844, 686380, 727739, 777208, 838764, 920291, 1041340, 1281967 ];
-def spa_sub(n):
-    i, a, b = 0, 1, 100
-    if n == 1:
-        return 25000000
-    if n >= SPASUBSIDY[100]: return 0
-    while b >= a:
-        i = (a+b)>>1
-        if n < SPASUBSIDY[i] and n >= SPASUBSIDY[i-1]:
-            break
-        if SPASUBSIDY[i] <= n:
-            a = i+1
-        else:
-            b = i-1
-
-    return 101-i
-
+	
 def get_subsidy(nCap, nMaxSubsidy, bnTarget):
     bnLowerBound = 0.01
     bnUpperBound = bnSubsidyLimit = nMaxSubsidy
@@ -71,217 +40,50 @@ def get_subsidy(nCap, nMaxSubsidy, bnTarget):
 
     return int(nSubsidy * 1000000)
 
-@defer.inlineCallbacks
-def check_genesis_block(bitcoind, genesis_block_hash):
-    try:
-        yield bitcoind.rpc_getblock(genesis_block_hash)
-    except jsonrpc.Error_for_code(-5):
-        defer.returnValue(False)
-    else:
-        defer.returnValue(True)
+def debug_block_info(dat1):
+	print 'block header',  data.block_header_type.unpack(dat1)['timestamp']
+	return 0
 
 nets = dict(
-    bitcoin=math.Object(
-        P2P_PREFIX='f9beb4d9'.decode('hex'),
-        P2P_PORT=8333,
-        ADDRESS_VERSION=0,
-        RPC_PORT=8332,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            (yield check_genesis_block(bitcoind, '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f')) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: 50*100000000 >> (height + 1)//210000,
-        POW_FUNC=data.hash256,
-        BLOCK_PERIOD=600, # s
-        SYMBOL='BTC',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'Bitcoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Bitcoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.bitcoin'), 'bitcoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='https://blockchain.info/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='https://blockchain.info/address/',
-        TX_EXPLORER_URL_PREFIX='https://blockchain.info/tx/',
-        SANE_TARGET_RANGE=(2**256//2**32//1000 - 1, 2**256//2**32 - 1),
-        DUMB_SCRYPT_DIFF=1,
-        DUST_THRESHOLD=0.001e8,
-    ),
-
-    litecoin=math.Object(
-        P2P_PREFIX='fbc0b6db'.decode('hex'),
-        P2P_PORT=9333,
-        ADDRESS_VERSION=48,
-        RPC_PORT=9332,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'litecoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: 50*100000000 >> (height + 1)//840000,
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('ltc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=150, # s
-        SYMBOL='LTC',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'Litecoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Litecoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.litecoin'), 'litecoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://explorer.litecoin.net/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://explorer.litecoin.net/address/',
-        TX_EXPLORER_URL_PREFIX='http://explorer.litecoin.net/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),
-
-    tenfivecoin=math.Object(
-        P2P_PREFIX='fabfb5da'.decode('hex'),
-        P2P_PORT=10511,
-        ADDRESS_VERSION=66,
-        RPC_PORT=10510,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'tenfivecoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: get_tenfivesubsidy(height),
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('vtc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=90, # s
-        SYMBOL='105',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'Tenfivecoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Tenfivecoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.tenfivecoin'), 'tenfivecoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://explorer.vertcoin.org/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://explorer.vertcoin.org/address/',
-        TX_EXPLORER_URL_PREFIX='http://explorer.vertcoin.org/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),
-
-    vertcoin=math.Object(
-        P2P_PREFIX='fabfb5da'.decode('hex'),
-        P2P_PORT=5889,
-        ADDRESS_VERSION=71,
-        RPC_PORT=5888,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'vertcoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: 50*100000000 >> (height + 1)//840000,
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('vtc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=150, # s
-        SYMBOL='VTC',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'Vertcoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Vertcoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.vertcoin'), 'vertcoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://explorer.vertcoin.org/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://explorer.vertcoin.org/address/',
-        TX_EXPLORER_URL_PREFIX='http://explorer.vertcoin.org/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),
-    
-    gpucoin=math.Object(
-        P2P_PREFIX='fbc0b6db'.decode('hex'),
-        P2P_PORT=8623,
-        ADDRESS_VERSION=38,
-        RPC_PORT=9026,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'gpucoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: 20000*100000000 >> (height + 1)//250000,
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('vtc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=60, # s
-        SYMBOL='GPUC',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'],
-            'Gpucoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Gpucoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.gpucoin'), 'gpucoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://explorer2.sancrypto.info/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://explorer2.sancrypto.info/address/',
-        TX_EXPLORER_URL_PREFIX='http://explorer2.sancrypto.info/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),
-
-    execoin=math.Object(
-        P2P_PREFIX='fabfb5da'.decode('hex'),
-        P2P_PORT=9989,
-        ADDRESS_VERSION=33,
-        RPC_PORT=9988,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'execoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: 50*100000000 >> (height + 1)//840000,
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('vtc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=45, # s
-        SYMBOL='EXE',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'],
-            'execoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/execoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.execoin'), 'execoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://explorer.execoin.net/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://explorer.execoin.net/address/',
-        TX_EXPLORER_URL_PREFIX='http://explorer.execoin.net/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),
-       
-    rotocoin=math.Object(
-        P2P_PREFIX='fabfb5da'.decode('hex'),
-        P2P_PORT=28820,
-        ADDRESS_VERSION=61,
-        RPC_PORT=28800,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'rotocoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: 2*100000000 >> (height + 1)//18000,
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('vtc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=288, # s
-        SYMBOL='Rt2',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'],
-            'rotocoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/rotocoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.rotocoin'), 'rotocoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://cryptexplorer.com/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://cryptexplorer.com/address/',
-        TX_EXPLORER_URL_PREFIX='http://cryptexplorer.com/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),                                                                                                                                                                      
-
-    spaincoin=math.Object(
-        P2P_PREFIX='fb149200'.decode('hex'),
-        P2P_PORT=11492,
-        ADDRESS_VERSION=63,
-        RPC_PORT=11491,
-        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'spaincoinaddress' in (yield bitcoind.rpc_help()) and
-            not (yield bitcoind.rpc_getinfo())['testnet']
-        )),
-        SUBSIDY_FUNC=lambda height: spa_sub(height), 
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('vtc_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=120, # s
-        SYMBOL='SPA',
-        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'Spaincoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/Spaincoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.spaincoin'), 'spaincoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://explorer.spaincoin.org/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://explorer.spaincoin.org/address/',
-        TX_EXPLORER_URL_PREFIX='http://explorer.spaincoin.org/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
-    ),
-
     milancoin=math.Object(
-        P2P_PREFIX='fbc8b7dc'.decode('hex'),
+        P2P_PREFIX='facbb0dc'.decode('hex'),
         P2P_PORT=8663,
         ADDRESS_VERSION=50,
         RPC_PORT=8662,
         RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
-            'milancoinaddress' in (yield bitcoind.rpc_help()) and
+            'ilancoinaddress' in (yield bitcoind.rpc_help()) and
             not (yield bitcoind.rpc_getinfo())['testnet']
         )),
-        SUBSIDY_FUNC=lambda height: get_milansubsidy(height), 
-        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(data)),
-        BLOCK_PERIOD=120, # s
+        SUBSIDY_FUNC=lambda height: get_milansubsidy(height),
+        BLOCKHASH_FUNC=lambda header: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(header, data.block_header_type.unpack(header)['timestamp'])),
+        POW_FUNC=lambda header: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(header, data.block_header_type.unpack(header)['timestamp'])),
+        BLOCK_PERIOD=60, # s
         SYMBOL='MLC',
         CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'milancoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/milancoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.milancoin'), 'milancoin.conf'),
-        BLOCK_EXPLORER_URL_PREFIX='http://www.milancoin.org/block/',
-        ADDRESS_EXPLORER_URL_PREFIX='http://www.milancoin.org/address/',
-        TX_EXPLORER_URL_PREFIX='http://www.milancoin.org/tx/',
-        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
-        DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
+        BLOCK_EXPLORER_URL_PREFIX='http://milancoin.org/block/',
+        ADDRESS_EXPLORER_URL_PREFIX='http://milancoin.org/address/',
+        SANE_TARGET_RANGE=(2**256//2**20//1000 - 1, 2**256//2**20 - 1),
     ),
-    
+
+    milancoin_testnet=math.Object(
+        P2P_PREFIX='fbc8b7dc'.decode('hex'),
+        P2P_PORT=8663,
+        ADDRESS_VERSION=78,
+        RPC_PORT=8662,
+        RPC_CHECK=defer.inlineCallbacks(lambda bitcoind: defer.returnValue(
+            'ilancoinaddress' in (yield bitcoind.rpc_help()) and
+            (yield bitcoind.rpc_getinfo())['testnet']
+        )),
+        SUBSIDY_FUNC=lambda target: get_subsidy(6, 10, target),
+        BLOCKHASH_FUNC=lambda data: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(data)),
+        POW_FUNC=lambda data: pack.IntType(256).unpack(__import__('yac_scrypt').getPoWHash(data)),
+        BLOCK_PERIOD=60, # s
+        SYMBOL='MLC',
+        CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'MilanCoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/YbCoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.milancoin'), 'milancoin.conf'),
+        BLOCK_EXPLORER_URL_PREFIX='http://nonexistent-milancoin-testnet-explorer/block/',
+        ADDRESS_EXPLORER_URL_PREFIX='http://nonexistent-milancoin-testnet-explorer/address/',
+        SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
+    ),
 )
 for net_name, net in nets.iteritems():
     net.NAME = net_name
