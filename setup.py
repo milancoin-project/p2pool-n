@@ -24,7 +24,7 @@ try:
     sys.argv[1:] = ['py2exe']
     setup(name='p2pool',
         version=version,
-        description='Peer-to-peer Bitcoin mining pool',
+        description='Peer-to-peer Milancoin mining pool',
         author='Forrest Voight',
         author_email='forrest@forre.st',
         url='http://p2pool.forre.st/',
@@ -44,7 +44,7 @@ try:
         options=dict(py2exe=dict(
             bundle_files=bundle,
             dll_excludes=['w9xpopen.exe', "mswsock.dll", "MSWSOCK.dll"],
-            includes=['twisted.web.resource', 'ltc_scrypt','vtc_scrypt'],
+            includes=['twisted.web.resource', 'yac_scrypt','ltc_scrypt','vtc_scrypt'],
         )),
         zipfile=None,
     )

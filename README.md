@@ -79,6 +79,17 @@ In bash type this:
 
     cd py_modules\vertcoin_scrypt
     C:\Python27\python.exe setup.py build --compile=mingw32 install
+	
+    cd py_modules\cach_scryptjane
+    C:\Python27\python.exe setup.py build --compile=mingw32 install
+	
+	cd py_modules\litecoin_scrypt
+    C:\Python27\python.exe setup.py build --compile=mingw32 install
+	
+	cd .\
+	python setup.py build --compile=mingw32
+	
+	
 
 Windows (microsoft visual c++)
 * Open visual studio console
@@ -121,7 +132,7 @@ Spaincoin:
 * Run your miner program, connecting to 127.0.0.1 on port 26490.
 
 Milancoin: 
-* Run P2Pool with the "--net Milancoin" option.
+* Run P2Pool with the "--net milancoin" option.
 * Run your miner program, connecting to 127.0.0.1 on port 13333.
 
 Sponsors:
