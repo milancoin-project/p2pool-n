@@ -202,24 +202,6 @@ nets = dict(
         VERSION_WARNING=lambda v: 'Upgrade Milancoin to >=0.7.8.0!' if v < 70008 else None,
     ),
 
-    milancoin_testnet=math.Object(
-        PARENT=networks.nets['milancoin_testnet'],
-        SHARE_PERIOD=3, # seconds
-        CHAIN_LENGTH=20*60//3, # shares
-        REAL_CHAIN_LENGTH=20*60//3, # shares
-        TARGET_LOOKBEHIND=200, # shares
-        SPREAD=12, # blocks
-        IDENTIFIER='e037d5b8c7923510'.decode('hex'),
-        PREFIX='7208c1a54ef649b0'.decode('hex'),
-        P2P_PORT=19777,
-        MIN_TARGET=0,
-        MAX_TARGET=2**256//2**20 - 1,
-        PERSIST=False,
-        WORKER_PORT=18336,
-        BOOTSTRAP_ADDRS='67.23.234.59,'.split(' '),
-        ANNOUNCE_CHANNEL='#p2pool-alt',
-        VERSION_CHECK=lambda v: v >= 60004,
-    ),
 )
 for net_name, net in nets.iteritems():
     net.NAME = net_name
