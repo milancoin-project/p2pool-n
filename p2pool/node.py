@@ -2,7 +2,7 @@ import random
 import sys
 import time
 
-from twisted.internet import defer, reactor, task
+from twisted.internet import defer, reactor
 from twisted.python import log
 
 from p2pool import data as p2pool_data, p2p
@@ -25,7 +25,11 @@ class P2PNode(p2p.Node):
             print 'Processing %i shares from %s...' % (len(shares), '%s:%i' % peer.addr if peer is not None else None)
         
         new_count = 0
-        for share in shares:
+        all_new_txs = {}
+        for share, new_txs in shares:
+            if new_txs is not None:
+                all_new_txs.update((bitcoin_data.hash256(bitcoin_data.tx_type.pack(new_tx)), new_tx) for new_tx in new_txs)
+            
             if share.hash in self.node.tracker.items:
                 #print 'Got duplicate share, ignoring. Hash: %s' % (p2pool_data.format_hash(share.hash),)
                 continue
@@ -35,6 +39,10 @@ class P2PNode(p2p.Node):
             #print 'Received share %s from %r' % (p2pool_data.format_hash(share.hash), share.peer_addr)
             
             self.node.tracker.add(share)
+        
+        new_known_txs = dict(self.node.known_txs_var.value)
+        new_known_txs.update(all_new_txs)
+        self.node.known_txs_var.set(new_known_txs)
         
         if new_count:
             self.node.set_best_share()
@@ -56,7 +64,7 @@ class P2PNode(p2p.Node):
         except:
             log.err(None, 'in handle_share_hashes:')
         else:
-            self.handle_shares(shares, peer)
+            self.handle_shares([(share, []) for share in shares], peer)
     
     def handle_get_shares(self, hashes, parents, stops, peer):
         parents = min(parents, 1000//len(hashes))
@@ -124,7 +132,7 @@ class P2PNode(p2p.Node):
                 if not shares:
                     yield deferral.sleep(1) # sleep so we don't keep rerequesting the same share nobody has
                     continue
-                self.handle_shares(shares, peer)
+                self.handle_shares([(share, []) for share in shares], peer)
         
         
         @self.node.best_block_header.changed.watch
@@ -181,29 +189,17 @@ class Node(object):
                     self.bitcoind_work.set((yield helper.getwork(self.bitcoind, self.bitcoind_work.value['use_getblocktemplate'])))
                 except:
                     log.err()
-                yield defer.DeferredList([flag, deferral.sleep(5)], fireOnOneCallback=True)
+                yield defer.DeferredList([flag, deferral.sleep(15)], fireOnOneCallback=True)
         work_poller()
         
         # PEER WORK
         
         self.best_block_header = variable.Variable(None)
-
-        self.pow_bits = variable.Variable(None)
-        self.pow_subsidy = 0
-
         def handle_header(new_header):
-            self.pow_bits = self.bitcoind_work.value['bits']
-            self.pow_subsidy = self.bitcoind_work.value['subsidy']
-
             # check that header matches current target
-            #
-            # TODO: PoS (stake-modifier & modifier-checksum) checkings implementation
-            #
             if not (self.net.PARENT.POW_FUNC(bitcoin_data.block_header_type.pack(new_header)) <= self.bitcoind_work.value['bits'].target):
                 return
-
             bitcoind_best_block = self.bitcoind_work.value['previous_block']
-
             if (self.best_block_header.value is None
                 or (
                     new_header['previous_block'] == bitcoind_best_block and
@@ -249,12 +245,6 @@ class Node(object):
         # add p2p transactions from bitcoind to known_txs
         @self.factory.new_tx.watch
         def _(tx):
-            if tx.timestamp > time.time() + 3600:
-                return
-            
-            if tx.timestamp > self.bitcoind_work.value['txn_timestamp']:
-                self.bitcoind_work.value['txn_timestamp'] = tx.timestamp
-            
             new_known_txs = dict(self.known_txs_var.value)
             new_known_txs[bitcoin_data.hash256(bitcoin_data.tx_type.pack(tx))] = tx
             self.known_txs_var.set(new_known_txs)
@@ -270,11 +260,9 @@ class Node(object):
         
         @self.tracker.verified.added.watch
         def _(share):
-            if share.timestamp < share.min_header['timestamp']:
-                return
             if not (share.pow_hash <= share.header['bits'].target):
                 return
-
+            
             block = share.as_block(self.tracker, self.known_txs_var.value)
             if block is None:
                 print >>sys.stderr, 'GOT INCOMPLETE BLOCK FROM PEER! %s bitcoin: %s%064x' % (p2pool_data.format_hash(share.hash), self.net.PARENT.BLOCK_EXPLORER_URL_PREFIX, share.header_hash)
@@ -295,11 +283,11 @@ class Node(object):
                     if tx_hash in self.known_txs_var.value:
                         new_known_txs[tx_hash] = self.known_txs_var.value[tx_hash]
             self.known_txs_var.set(new_known_txs)
-        t = task.LoopingCall(forget_old_txs)
+        t = deferral.RobustLoopingCall(forget_old_txs)
         t.start(10)
         stop_signal.watch(t.stop)
         
-        t = task.LoopingCall(self.clean_tracker)
+        t = deferral.RobustLoopingCall(self.clean_tracker)
         t.start(5)
         stop_signal.watch(t.stop)
     

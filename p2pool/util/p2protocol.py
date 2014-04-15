@@ -15,11 +15,12 @@ class TooLong(Exception):
     pass
 
 class Protocol(protocol.Protocol):
-    def __init__(self, message_prefix, max_payload_length, traffic_happened=variable.Event()):
+    def __init__(self, message_prefix, max_payload_length, traffic_happened=variable.Event(), ignore_trailing_payload=False):
         self._message_prefix = message_prefix
         self._max_payload_length = max_payload_length
         self.dataReceived2 = datachunker.DataChunker(self.dataReceiver())
         self.traffic_happened = traffic_happened
+        self.ignore_trailing_payload = ignore_trailing_payload
     
     def dataReceived(self, data):
         self.traffic_happened.happened('p2p/in', len(data))
@@ -40,7 +41,9 @@ class Protocol(protocol.Protocol):
             payload = yield length
             
             if hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4] != checksum:
-                print 'invalid hash for', self.transport.getPeer().host, repr(command), length, checksum.encode('hex'), hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4].encode('hex'), payload.encode('hex')
+                print 'invalid hash for', self.transport.getPeer().host, repr(command), length, checksum.encode('hex')
+                if p2pool.DEBUG:
+                    print hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4].encode('hex'), payload.encode('hex')
                 self.badPeerHappened()
                 continue
             
@@ -51,11 +54,11 @@ class Protocol(protocol.Protocol):
                 continue
             
             try:
-                self.packetReceived(command, type_.unpack(payload))
+                self.packetReceived(command, type_.unpack(payload, self.ignore_trailing_payload))
             except:
                 print 'RECV', command, payload[:100].encode('hex') + ('...' if len(payload) > 100 else '')
                 log.err(None, 'Error handling message: (see RECV line)')
-                self.transport.loseConnection()
+                self.disconnect()
     
     def packetReceived(self, command, payload2):
         handler = getattr(self, 'handle_' + command, None)
@@ -67,8 +70,16 @@ class Protocol(protocol.Protocol):
         if getattr(self, 'connected', True) and not getattr(self, 'disconnecting', False):
             handler(**payload2)
     
+    def disconnect(self):
+        if hasattr(self.transport, 'abortConnection'):
+            # Available since Twisted 11.1
+            self.transport.abortConnection()
+        else:
+            # This doesn't always close timed out connections! warned about in main
+            self.transport.loseConnection()
+    
     def badPeerHappened(self):
-        self.transport.loseConnection()
+        self.disconnect()
     
     def sendPacket(self, command, payload2):
         if len(command) >= 12:

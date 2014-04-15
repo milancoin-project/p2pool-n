@@ -196,9 +196,10 @@ nets = dict(
         MAX_TARGET=2**256//2**20 - 1,
         PERSIST=False,
         WORKER_PORT=8668,
-        BOOTSTRAP_ADDRS='67.23.234.59,'.split(' '),
+        BOOTSTRAP_ADDRS='67.23.234.59 '.split(' '),
         ANNOUNCE_CHANNEL='#p2pool-mlc',
-        VERSION_CHECK=lambda v: True,
+        #VERSION_CHECK=lambda v: True,
+		VERSION_CHECK=lambda v: True,
         VERSION_WARNING=lambda v: 'Upgrade Milancoin to >=0.7.8.0!' if v < 70008 else None,
     ),
 

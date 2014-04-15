@@ -6,7 +6,7 @@ import random
 import sys
 import time
 
-from twisted.internet import protocol, task
+from twisted.internet import protocol
 
 import p2pool
 from . import data as bitcoin_data
@@ -14,7 +14,7 @@ from p2pool.util import deferral, p2protocol, pack, variable
 
 class Protocol(p2protocol.Protocol):
     def __init__(self, net):
-        p2protocol.Protocol.__init__(self, net.P2P_PREFIX, 1000000)
+        p2protocol.Protocol.__init__(self, net.P2P_PREFIX, 1000000, ignore_trailing_payload=True)
         self.net = net
 
     def connectionMade(self):
@@ -60,7 +60,7 @@ class Protocol(p2protocol.Protocol):
         if hasattr(self.factory, 'gotConnection'):
             self.factory.gotConnection(self)
 
-        self.pinger = task.LoopingCall(self.send_ping, nonce=1234)
+        self.pinger = deferral.RobustLoopingCall(self.send_ping, nonce=1234)
         self.pinger.start(30)
 
     message_inv = pack.ComposedType([
