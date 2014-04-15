@@ -281,6 +281,7 @@ nets = dict(
         CONF_FILE_FUNC=lambda: os.path.join(os.path.join(os.environ['APPDATA'], 'milancoin') if platform.system() == 'Windows' else os.path.expanduser('~/Library/Application Support/milancoin/') if platform.system() == 'Darwin' else os.path.expanduser('~/.milancoin'), 'milancoin.conf'),
         BLOCK_EXPLORER_URL_PREFIX='http://milancoin.org/block/',
         ADDRESS_EXPLORER_URL_PREFIX='http://milancoin.org/address/',
+		TX_EXPLORER_URL_PREFIX='http://milancoin.org/tx/',
         #SANE_TARGET_RANGE=(2**256//2**20//1000 - 1, 2**256//2**20 - 1),
         SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
         DUMB_SCRYPT_DIFF=2**16,
