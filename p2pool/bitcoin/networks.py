@@ -8,10 +8,10 @@ from p2pool.util import math, pack
 from operator import *
 
 def get_milansubsidy(mnHeight):
-    if mnHeight < 250000:     
+    if mnHeight < 250000:
         nSubsidy = 40
     elif mnHeight < 500000:
-        nSubsidy = 25 
+        nSubsidy = 25
     elif mnHeight < 750000:
         nSubsidy = 10
     elif mnHeight < 2000000:
@@ -285,7 +285,7 @@ nets = dict(
         #SANE_TARGET_RANGE=(2**256//2**20//1000 - 1, 2**256//2**20 - 1),
         SANE_TARGET_RANGE=(2**256//1000000000 - 1, 2**256//1000 - 1),
         DUMB_SCRYPT_DIFF=2**16,
-        DUST_THRESHOLD=0.03e8,
+        DUST_THRESHOLD=1e8,
     ),
 
 )

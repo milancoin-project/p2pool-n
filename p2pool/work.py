@@ -97,9 +97,10 @@ class WorkerBridge(worker_interface.WorkerBridge):
                     bits=bb['bits'], # not always true
                     coinbaseflags='',
                     height=t['height'] + 1,
-                    time=bb['timestamp'] + 120, # better way?
+                    time=bb['timestamp'] + 10, # better way?
                     transactions=[],
                     transaction_fees=[],
+                    txn_timestamp=0,
                     merkle_link=bitcoin_data.calculate_merkle_link([None], 0),
                     subsidy=self.node.net.PARENT.SUBSIDY_FUNC(self.node.bitcoind_work.value['height']),
                     last_update=self.node.bitcoind_work.value['last_update'],
@@ -221,6 +222,11 @@ class WorkerBridge(worker_interface.WorkerBridge):
         
         tx_hashes = [bitcoin_data.hash256(bitcoin_data.tx_type.pack(tx)) for tx in self.current_work.value['transactions']]
         tx_map = dict(zip(tx_hashes, self.current_work.value['transactions']))
+        txn_timestamp = self.current_work.value['txn_timestamp']
+        
+        #print
+        print txn_timestamp
+        #print
         
         previous_share = self.node.tracker.items[self.node.best_share_var.value] if self.node.best_share_var.value is not None else None
         if previous_share is None:
@@ -315,13 +321,13 @@ class WorkerBridge(worker_interface.WorkerBridge):
         lp_count = self.new_work_event.times
         merkle_link = bitcoin_data.calculate_merkle_link([None] + other_transaction_hashes, 0)
         
-        print 'New work for worker %s! Difficulty: %.06f Share difficulty: %.06f (speed %.06f) Total block value: %.6f %s including %i transactions' % (
+        print 'New work for worker %s! Difficulty: %.08f Share difficulty: %.08f (speed %.08f) Total block value: %.6f %s including %i transactions' % (
             bitcoin_data.pubkey_hash_to_address(pubkey_hash, self.node.net.PARENT),
             bitcoin_data.target_to_difficulty(target),
             bitcoin_data.target_to_difficulty(share_info['bits'].target),
             #self.get_local_addr_rates().get(pubkey_hash, 0),
             local_addr_rates.get(pubkey_hash, 0),
-            self.current_work.value['subsidy']*1e-8, self.node.net.PARENT.SYMBOL,
+            self.current_work.value['subsidy']*1e-6, self.node.net.PARENT.SYMBOL,
             len(self.current_work.value['transactions']),
         )
 
